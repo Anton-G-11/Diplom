@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<!--
+Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
+Click nbfs://nbhost/SystemFileSystem/Templates/Other/html.html to edit this template
+-->
+<html xmlns:layout="http://www.w3.org/1999/xhtml" layout:decorate="~{layouts/index}">
+    <head>
+        <title>TODO supply a title</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    </head>
+    <body>
+        <div  class="col-12" layout:fragment="content">
+            <div class="row">
+                <div class="col-4">
+                    <a href="/lessons" class="btn btn-sm btn-outline-primary">Back to main page</a>
+                    <a href="javascript:;" class="btn btn-sm btn-outline-primary" onclick="SaveChanges()">Save changes</a>
+                </div>
+                <div class="col-4">
+                    <form class="form-inline">
+                        <div class="form-group mb-2">
+                            <label>Teachers: </label>
+                            <select class="form-control form-control-sm" name="teacher_id" style='width: 200px' onchange="this.form.submit()">
+                                <option value="0">---</option>
+                                <option th:each="teacher : ${teachers}" 
+                                        th:value="${teacher.id}" 
+                                        th:text="${teacher.firstName} + ' ' + ${teacher.lastName}"
+                                        th:selected="${teacher.id} == ${teacher_id} ? true : false"></option>
+                            </select>
+                        </div>
+                        <div class="form-group mx-sm-3 mb-2">
+                            <label>Groups: </label>
+                            <select class="form-control form-control-sm" name="group_id"  style='width: 200px' onchange="this.form.submit()">
+                                <option value="0">---</option>
+                                <option th:each="group : ${groups}" 
+                                        th:value="${group.id}" 
+                                        th:text="${group.name}"
+                                        th:selected="${group.id} == ${group_id} ? true : false"></option>
+                            </select>
+                        </div>
+                    </form>
+                </div>
+                <div class="col-4">
+                    <a href="/createschedule/reset" class="btn btn-sm btn-outline-primary">Reset all</a>
+                    <a href="/createschedule/assign" class="btn btn-sm btn-outline-primary">Assign all</a>
+                    <a href="/createschedule/current" class="btn btn-sm btn-outline-primary">Get current schedule</a>
+                    <a href="/download" class="btn btn-sm btn-outline-primary">Download</a>
+                    <a href="/import" class="btn btn-sm btn-outline-primary">Upload</a>
+                </div>
+            </div>
+            <div class="row"><div class="col-10">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr><td style='width: 70px'>#</td>
+                                <td style='width: 16%' th:each="weekday: ${weekdays}"> <span th:text="${weekday.value}"></span></td>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="pair: ${paircomments}">
+                                <td th:text="${pair.value}"></td>
+                                <td th:each="weekday: ${weekdays}">  
+                                    <div th:with="tplKey=${weekday.key}+'_'+${pair.key}">
+                                        <div class="notset" th:attr="data-day=${weekday.key},data-number=${pair.key}" th:if="${slots.contains(tplKey)}">+</div>
+                                        <div class="box emplyslot" th:attr="data-day=${weekday.key},data-number=${pair.key}" th:if="${!slots.contains(tplKey)}">+</div>
+                                        <span th:if="${displaylist.containsKey(tplKey)}">
+                                            <div th:each="elem: ${displaylist.get(tplKey)}" class="box lesson" draggable="true" th:id="'lesson_' + ${elem.id}" th:attr="data-day=${elem.day},data-number=${elem.number}">
+                                                <span class="badge badge-pill badge-info" th:if="${elem.type == 'lab'}">[[${elem.type}]]</span>
+                                                <span class="badge badge-pill badge-primary" th:unless="${elem.type == 'lab'}">[[${elem.type}]]</span>
+                                                [[${elem.name}]] 
+                                                <br />[[|${elem.user.firstName} ${elem.user.lastName}|]]
+                                                <br />[[|${elem.groups}|]]
+                                            </div>
+                                        </span> 
+                                    </div>
+                                    
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="col-2">
+                    <h5>Unassigned Lessons</h5>
+                    <div class="box emplyslot" th:attr="data-day=0,data-number=0">+</div>
+                    <span th:if="${displaylist.containsKey('0_0')}">
+                        <div th:each="elem: ${displaylist.get('0_0')}" class="box lesson" draggable="true" th:id="'lesson_' + ${elem.id}" th:attr="data-day=${elem.day},data-number=${elem.number}">
+                            <span class="badge badge-pill badge-info" th:if="${elem.type == 'lab'}">[[${elem.type}]]</span>
+                            <span class="badge badge-pill badge-primary" th:unless="${elem.type == 'lab'}">[[${elem.type}]]</span>
+                            [[${elem.name}]] 
+                            <br />[[|${elem.user.firstName} ${elem.user.lastName}|]]
+                            <br />[[|${elem.groups}|]]
+                        </div>
+                    </span> 
+                    
+                </div>
+            </div>
+
+            <script>
+
+                var dragSrcEl = null;
+                let items = document.querySelectorAll('.box');
+
+                function handleDragStart(e) {
+                    this.style.opacity = '0.4';
+
+                    dragSrcEl = this;
+
+                    e.dataTransfer.effectAllowed = 'move';
+                    e.dataTransfer.setData('text/html', this.innerHTML);
+                    e.dataTransfer.setData('element_id', $(this).attr('id'));
+                }
+
+                function handleDragOver(e) {
+                    if (e.preventDefault) {
+                        e.preventDefault();
+                    }
+
+                    e.dataTransfer.dropEffect = 'move';
+
+                    return false;
+                }
+
+                function handleDragEnter(e) {
+                    this.classList.add('over');
+                }
+
+                function handleDragLeave(e) {
+                    this.classList.remove('over');
+                }
+
+                function handleDrop(e) {
+                    if (e.stopPropagation) {
+                        e.stopPropagation(); // stops the browser from redirecting.
+                    }
+                    if (dragSrcEl != this) {
+                        var element_id = e.dataTransfer.getData('element_id');
+                        var new_day = $(this).data('day');
+                        var new_number = $(this).data('number');
+                        if (this.innerHTML == '+') {
+                            var lessonBox = $(dragSrcEl).remove();
+                            $(lessonBox).insertAfter(this);
+                            $(lessonBox).data('day', new_day);
+                            $(lessonBox).data('number', new_number);
+                        } else {
+                            var prev_day = $(dragSrcEl).data('day');
+                            var prev_number = $(dragSrcEl).data('number');
+                            var new_id = $(this).attr('id');
+                            dragSrcEl.innerHTML = this.innerHTML;
+                            this.innerHTML = e.dataTransfer.getData('text/html');
+
+                            $('#' + element_id).data('day', new_day);
+                            $('#' + element_id).data('number', new_number);
+
+                            $('#' + new_id).data('day', prev_day);
+                            $('#' + new_id).data('number', prev_number);
+                        }
+                        SaveSingle();
+                    }
+                    
+
+                    return false;
+                }
+
+                function handleDragEnd(e) {
+                    this.style.opacity = '1';
+
+                    items.forEach(function (item) {
+                        item.classList.remove('over');
+                    });
+                }
+
+                function setEventListener(item) {
+                    item.addEventListener('dragstart', handleDragStart, false);
+                    item.addEventListener('dragenter', handleDragEnter, false);
+                    item.addEventListener('dragover', handleDragOver, false);
+                    item.addEventListener('dragleave', handleDragLeave, false);
+                    item.addEventListener('drop', handleDrop, false);
+                    item.addEventListener('dragend', handleDragEnd, false);
+                }
+                document.addEventListener('DOMContentLoaded', (event) => {
+                    items.forEach(function (item) {
+                        setEventListener(item);
+                    });
+                });
+
+                function SaveChanges() {
+                    axios.get('/createschedule/saveall').then(function (response) {
+                        console.log(response.data);
+                        $('#alert').show();
+                        setTimeout(() => {
+                            $('#alert').hide();
+                        }, 1000);
+                    }).catch(function (error) {
+                        console.log(error);
+                    });
+                    ;
+                }
+                function SaveSingle() {
+                    let lessons = document.querySelectorAll('.lesson');
+                    let data = [];
+                    lessons.forEach(function (item) {
+                        var elem_id = $(item).attr('id').replace("lesson_", "");
+                        var day = $(item).data('day');
+                        var number = $(item).data('number');
+                        var lesson = {'id': elem_id, 'day': day, 'number': number};
+                        data.push(lesson);
+                    });
+                    axios.post('/createschedule/savesingle', data).then(function (response) {
+                        console.log(response.data);
+                       
+                    }).catch(function (error) {
+                        console.log(error);
+                    });
+                    ;
+                }
+            </script>
+
+            <style >
+                .box {
+                    border: 2px solid #666;
+                    border-radius: .5em;
+                    padding: 8px;
+                    margin: 5px;
+                    cursor: move;
+                }
+
+                .alertbox {
+                    border: 1px solid #28a745;
+                    border-radius: .5em;
+                    padding: 3px;
+                    margin: 3px;
+                    text-align: center;
+                    color: #28a745;
+                }
+
+                .box.over {
+                    border: 2px dotted #666;
+                }
+
+                .lesson {
+                    background-color: #dee2e6;
+                }
+
+                .emplyslot {
+                    background-color: white;
+                }
+                .notset {
+                    border: 1px solid red;
+                    border-radius: .5em;
+                    padding: 8px;
+                    margin: 5px;
+                    background-color: white;
+                }
+            </style>
+
+        </div>
+    </body>
+</html>

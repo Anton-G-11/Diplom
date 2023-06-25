@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<!--
+Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
+Click nbfs://nbhost/SystemFileSystem/Templates/Other/html.html to edit this template
+-->
+<html xmlns:layout="http://www.w3.org/1999/xhtml" layout:decorate="~{layouts/index}">    <head>
+        <title>TODO supply a title</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    </head>
+    <body>
+        <div  class="col-12" layout:fragment="content">
+            <div class="row">
+                <div class="col-2"> 
+                     <a href="/createschedule" class="btn btn-sm btn-outline-primary">Back</a>
+                </div>
+                <div class="col-8">
+                    <form action="/import" method="post" class="form-horizontal" >
+                        <input type="file" name="file" id="fileToUpload" >
+                        <input type="button" value="Confirm" onclick="FileUpload()">  
+                    </form>
+                    <table border="1" id="result" class="table table-striped table-condensed"></table>
+                </div>
+            </div>
+            <script>
+                function FileUpload()
+                {
+                    var formData = new FormData();
+                    formData.append('file', $('#fileToUpload')[0].files[0]);
+
+                    axios.post("/upload", formData, {headers: {'Content-Type': 'multipart/form-data'}})
+                            .then(response => {
+                                console.log(response.data);
+                                $('#rowTmpl').tmpl(response.data).appendTo('#result');
+                            });
+                }
+            </script>
+            <script id="rowTmpl" type="text/x-jquery-tmpl">
+                <tr><td>${id}</td><td>${daytitle}</td><td>${pair}</td><td>${type}</td><td>${lesson}</td><td>${teacher}</td><td>${groups}</td></tr>
+            </script>
+
+        </div>
+    </body>
+</html>
